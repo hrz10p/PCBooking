@@ -8,7 +8,6 @@ import (
 	"sync"
 )
 
-// Logger - структура нашего логгера
 type Logger struct {
 	infoLogger  *log.Logger
 	warnLogger  *log.Logger
