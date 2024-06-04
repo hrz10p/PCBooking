@@ -19,12 +19,12 @@ const (
 type Token struct {
 	Plaintext string    `json:"token"`
 	Hash      []byte    `json:"-"`
-	UserID    int64     `json:"-"`
+	UserID    string    `json:"-"`
 	Expiry    time.Time `json:"expiry"`
 	Scope     string    `json:"-"`
 }
 
-func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
+func generateToken(userID string, ttl time.Duration, scope string) (*Token, error) {
 	token := &Token{
 		UserID: userID,
 		Expiry: time.Now().Add(ttl),
@@ -52,7 +52,7 @@ type TokenModel struct {
 	DB *sql.DB
 }
 
-func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+func (m TokenModel) New(userID string, ttl time.Duration, scope string) (*Token, error) {
 	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (m TokenModel) Get(scope string, userID int64) (*Token, error) {
 	return &token, nil
 }
 
-func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
+func (m TokenModel) DeleteAllForUser(scope string, userID string) error {
 	query := `
 		DELETE FROM tokens
 		WHERE scope = $1 AND user_id = $2

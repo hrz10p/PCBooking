@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) createActivationTokenHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -37,7 +37,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		app.invalidCredentialsResponse(w, r)
 		return
 	}
-	token, err := app.models.Tokens.New(user.ID, user.UserRole, 2*time.Minute, data.ScopeAuthentication)
+	token, err := app.models.ActivationTokens.New(user.ID, 2*time.Minute, data.ScopeAuthentication)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return

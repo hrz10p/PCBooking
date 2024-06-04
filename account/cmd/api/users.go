@@ -47,12 +47,12 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	token, err := app.models.Tokens.New(user.ID, user.UserRole, 10*time.Minute, data.ScopeActivation)
+	token, err := app.models.ActivationTokens.New(user.ID, 10*time.Minute, data.ScopeActivation)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	fmt.Println(token.Jwt)
+	fmt.Println(token)
 
 	/* SEND AUTHENTICATION TOKEN */
 
@@ -81,6 +81,15 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	if !match {
 		app.badRequestResponse(w, r, err)
 		return
+	}
+	jwtToken, err := app.models.JWTTokens.GenerateToken(user.ID, user.UserRole)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"autorization_token": jwtToken, "user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
 	}
 }
 
@@ -178,7 +187,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	err = app.models.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+	err = app.models.ActivationTokens.DeleteAllForUser(data.ScopeActivation, user.ID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
