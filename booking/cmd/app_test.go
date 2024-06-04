@@ -53,15 +53,12 @@ func TestBookComputer(t *testing.T) {
 	app, err := setupTestApp()
 	assert.NoError(t, err)
 
-	// Seed a computer
 	computer := models.Computer{Number: 1, Status: "available"}
 	app.db.Create(&computer)
 
-	// Create a valid token
-	token, err := app.jwtUtil.GenerateToken("user123", "user")
+	token, err := app.jwtUtil.GenerateToken("user123", "user", "email@mail.com")
 	assert.NoError(t, err)
 
-	// Perform a booking request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/book", strings.NewReader(`{"computer_id": 1, "start_time": "2024-06-01T10:00:00Z", "end_time": "2024-06-01T12:00:00Z"}`))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -79,7 +76,6 @@ func TestGetAvailableComputers(t *testing.T) {
 
 	db2.SeedComputers(app.db)
 
-	// Perform a get request for available computers
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/available", nil)
 
@@ -98,7 +94,6 @@ func TestCancelBooking(t *testing.T) {
 	app, err := setupTestApp()
 	assert.NoError(t, err)
 
-	// Seed a computer and a booking
 	computer := models.Computer{Number: 1, Status: "available"}
 	app.db.Create(&computer)
 
@@ -116,11 +111,9 @@ func TestCancelBooking(t *testing.T) {
 	}
 	app.db.Create(&booking)
 
-	// Create a valid token
-	token, err := app.jwtUtil.GenerateToken("user123", "user")
+	token, err := app.jwtUtil.GenerateToken("user123", "user", "email@mail.com")
 	assert.NoError(t, err)
 
-	// Perform a cancel booking request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/cancel/"+strconv.Itoa(int(booking.ID)), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -135,11 +128,9 @@ func TestAdminCreateComputer(t *testing.T) {
 	app, err := setupTestApp()
 	assert.NoError(t, err)
 
-	// Create a valid admin token
-	token, err := app.jwtUtil.GenerateToken("admin123", "admin")
+	token, err := app.jwtUtil.GenerateToken("user123", "admin", "email@mail.com")
 	assert.NoError(t, err)
 
-	// Perform a create computer request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/admin/computers", strings.NewReader(`{"number": 2, "status": "available"}`))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -155,11 +146,9 @@ func TestAdminMiddleware(t *testing.T) {
 	app, err := setupTestApp()
 	assert.NoError(t, err)
 
-	// Create a valid user token (non-admin)
-	token, err := app.jwtUtil.GenerateToken("user123", "user")
+	token, err := app.jwtUtil.GenerateToken("user123", "user", "email@mail.com")
 	assert.NoError(t, err)
 
-	// Perform an admin-only request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/admin/computers", strings.NewReader(`{"number": 2, "status": "available"}`))
 	req.Header.Set("Authorization", "Bearer "+token)

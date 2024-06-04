@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func (app *application) authMiddleware(c *gin.Context) {
@@ -38,4 +40,29 @@ func (app *application) adminMiddleware(c *gin.Context) {
 		return
 	}
 	c.Next()
+}
+
+func (app *application) LoggingMiddleware(c *gin.Context) {
+	startTime := time.Now()
+
+	c.Next()
+
+	statusCode := c.Writer.Status()
+	latency := time.Since(startTime)
+
+	message := fmt.Sprintf(
+		"%s - %s %s (%d) - %s",
+		c.ClientIP(),
+		c.Request.Method,
+		c.Request.URL.Path,
+		statusCode,
+		latency,
+	)
+
+	switch statusCode {
+	case 200:
+		app.logger.Info(message)
+	default:
+		app.logger.Error(message)
+	}
 }

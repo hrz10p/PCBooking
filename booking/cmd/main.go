@@ -21,6 +21,7 @@ type application struct {
 }
 
 func (app *application) initializeRoutes() {
+	app.router.Use(app.LoggingMiddleware)
 	app.router.POST("/book", app.authMiddleware, app.bookComputer)
 	app.router.GET("/available", app.getAvailableComputers)
 	app.router.DELETE("/cancel/:id", app.authMiddleware, app.cancelBooking)
@@ -69,6 +70,8 @@ func newApplication() (*application, error) {
 	gin.SetMode(cfg.GinMode)
 
 	router := gin.New()
+
+	router.Use(gin.Recovery())
 
 	app := &application{
 		logger:  myLogger,

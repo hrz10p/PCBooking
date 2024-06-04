@@ -8,7 +8,7 @@ import (
 func TestGenerateToken(t *testing.T) {
 	jwtUtil := NewJWTUtil("test-secret")
 
-	token, err := jwtUtil.GenerateToken("user123", "admin")
+	token, err := jwtUtil.GenerateToken("user123", "user", "email@mail.com")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
 }
@@ -16,7 +16,7 @@ func TestGenerateToken(t *testing.T) {
 func TestValidateToken(t *testing.T) {
 	jwtUtil := NewJWTUtil("test-secret")
 
-	token, err := jwtUtil.GenerateToken("user123", "admin")
+	token, err := jwtUtil.GenerateToken("user123", "admin", "email@mail.com")
 	assert.NoError(t, err)
 
 	claims, err := jwtUtil.ValidateToken(token)
