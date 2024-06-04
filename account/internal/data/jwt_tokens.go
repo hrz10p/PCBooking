@@ -10,6 +10,7 @@ import (
 type Claims struct {
 	UserID string `json:"userId"`
 	Role   string `json:"role"`
+	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -21,12 +22,13 @@ func NewJWTUtil(secret string) *JWTUtil {
 	return &JWTUtil{secret: secret}
 }
 
-func (j *JWTUtil) GenerateToken(userID, role string) (string, error) {
+func (j *JWTUtil) GenerateToken(userID, role, email string) (string, error) {
 	claims := &Claims{
 		UserID: userID,
 		Role:   role,
+		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)), // Token valid for 72 hours
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
 	}
 

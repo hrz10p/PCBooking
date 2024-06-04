@@ -1,18 +1,18 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"flag"
 	"fmt"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"log"
 	"net/http"
 	"os"
 	"pc_booking_account_system/internal/data"
 	"time"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 const version = "1.0.0"
@@ -24,7 +24,7 @@ type config struct {
 		dsn          string
 		maxOpenConns int
 		maxIdleConns int
-		maxIdleTime  string
+		maxIdleTime  time.Duration
 	}
 	limiter struct {
 		rps     float64
@@ -47,7 +47,7 @@ func main() {
 	flag.StringVar(&cfg.db.dsn, "db-dsn", "postgres://default:fx1UvCaYwB8Q@ep-shy-cake-a2k2eyk6.eu-central-1.aws.neon.tech:5432/verceldb?sslmode=require", "PostgreSQL DSN")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
-	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
 
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
@@ -58,39 +58,23 @@ func main() {
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
 	db, err := openDB(cfg)
-
 	if err != nil {
 		logger.Fatal(err)
 	}
-
 	defer db.Close()
 
 	logger.Printf("database connection pool established")
 
-	migrationDriver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		logger.Fatal(err, nil)
+	if err := runMigrations(db, logger); err != nil {
+		logger.Fatal("database migration failed: ", err)
 	}
-
-	migration, err := migrate.NewWithDatabaseInstance("file://./migrations", "postgres", migrationDriver)
-
-	if err != nil {
-		logger.Fatal(err)
-	}
-	err = migration.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		logger.Fatal(err)
-	}
-	logger.Printf("database migrations applied")
 
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
 	}
-	go func() {
 
-	}()
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
 		Handler:      app.routes(),
@@ -107,25 +91,36 @@ func main() {
 func openDB(cfg config) (*sql.DB, error) {
 	db, err := sql.Open("postgres", cfg.db.dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening database connection: %w", err)
 	}
 
 	db.SetMaxOpenConns(cfg.db.maxOpenConns)
 	db.SetMaxIdleConns(cfg.db.maxIdleConns)
+	db.SetConnMaxIdleTime(cfg.db.maxIdleTime)
 
-	duration, err := time.ParseDuration(cfg.db.maxIdleTime)
-	if err != nil {
-		return nil, err
-	}
-	db.SetConnMaxIdleTime(duration)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return nil, err
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("error pinging database: %w", err)
 	}
 
 	return db, nil
+}
+
+func runMigrations(db *sql.DB, logger *log.Logger) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("error creating migration driver: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance("file://./migrations", "postgres", driver)
+	if err != nil {
+		return fmt.Errorf("error creating migration instance: %w", err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("error applying migrations: %w", err)
+	}
+
+	logger.Printf("database migrations applied")
+	return nil
 }

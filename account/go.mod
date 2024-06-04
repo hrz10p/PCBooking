@@ -6,7 +6,9 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce
 	golang.org/x/crypto v0.20.0
+	golang.org/x/time v0.3.0
 )
 
 require (

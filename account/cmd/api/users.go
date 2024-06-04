@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"pc_booking_account_system/internal/data"
 	"pc_booking_account_system/internal/validator"
@@ -47,16 +46,20 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	token, err := app.models.ActivationTokens.New(user.ID, 10*time.Minute, data.ScopeActivation)
+	activationToken, err := app.models.ActivationTokens.New(user.ID, 10*time.Minute, data.ScopeActivation)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	fmt.Println(token)
+	//err = app.models.ActivationTokens.Insert(activationToken)
+	//if err != nil {
+	//	app.serverErrorResponse(w, r, err)
+	//	return
+	//}
 
-	/* SEND AUTHENTICATION TOKEN */
+	/* SEND ACTIVATION TOKEN */
 
-	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
+	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user, "activation_token": activationToken}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
@@ -82,7 +85,7 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	jwtToken, err := app.models.JWTTokens.GenerateToken(user.ID, user.UserRole)
+	jwtToken, err := app.models.JWTTokens.GenerateToken(user.ID, user.UserRole, user.Email)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -126,7 +129,7 @@ func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) deleteByEmailUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Email string `json:"email"`
 	}
@@ -196,8 +199,4 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
-}
-
-func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
-
 }
