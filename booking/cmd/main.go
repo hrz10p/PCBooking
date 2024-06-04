@@ -60,7 +60,9 @@ func newApplication() (*application, error) {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 
-	db2.SeedComputers(dbconn)
+	if cfg.Seeder == "True" {
+		db2.SeedComputers(dbconn)
+	}
 
 	myLogger.Info("DB initialized")
 

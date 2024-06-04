@@ -15,6 +15,7 @@ type Config struct {
 	LogPath    string
 	GinMode    string
 	Secret     string
+	Seeder     string
 }
 
 func LoadConfig() *Config {
@@ -32,5 +33,6 @@ func LoadConfig() *Config {
 		LogPath:    os.Getenv("LOG_PATH"),
 		GinMode:    os.Getenv("GIN_MODE"),
 		Secret:     os.Getenv("SECRET"),
+		Seeder:     os.Getenv("SEEDER"),
 	}
 }
