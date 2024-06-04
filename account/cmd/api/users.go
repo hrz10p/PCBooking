@@ -47,12 +47,12 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	token, err := app.models.Tokens.New(user.ID, 10*time.Minute, data.ScopeActivation)
+	token, err := app.models.Tokens.New(user.ID, user.UserRole, 10*time.Minute, data.ScopeActivation)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	fmt.Println(token.Plaintext)
+	fmt.Println(token.Jwt)
 
 	/* SEND AUTHENTICATION TOKEN */
 
@@ -84,13 +84,16 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.readIDParam(r)
+func (app *application) getUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+	err := app.readJSON(w, r, &input)
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.badRequestResponse(w, r, err)
 		return
 	}
-	user, err := app.models.Users.Get(id)
+	user, err := app.models.Users.GetByEmail(input.Email)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
@@ -115,12 +118,20 @@ func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.readIDParam(r)
+	var input struct {
+		Email string `json:"email"`
+	}
+	err := app.readJSON(w, r, &input)
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.badRequestResponse(w, r, err)
 		return
 	}
-	err = app.models.Users.Delete(id)
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	err = app.models.Users.Delete(user.ID)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
