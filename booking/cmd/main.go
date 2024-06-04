@@ -3,35 +3,29 @@ package main
 import (
 	"booking/internal/config"
 	db2 "booking/internal/db"
+	"booking/internal/jwt"
 	"booking/internal/logger"
+	"booking/internal/models"
 	"fmt"
-	"log"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"log"
 )
 
-// application - структура приложения, содержащая логгер, маршруты и соединение с базой данных
 type application struct {
-	logger *logger.Logger
-	router *gin.Engine
-	db     *gorm.DB
-	config *config.Config
+	logger  *logger.Logger
+	router  *gin.Engine
+	db      *gorm.DB
+	config  *config.Config
+	jwtUtil *jwt.JWTUtil
 }
 
-// initializeRoutes - функция для инициализации маршрутов
 func (app *application) initializeRoutes() {
-	app.router.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
-
-	// Добавьте сюда другие маршруты
+	app.router.POST("/book", app.authMiddleware, app.bookComputer)
+	app.router.GET("/available", app.getAvailableComputers)
+	app.router.DELETE("/cancel/:id", app.authMiddleware, app.cancelBooking)
 }
 
-// newApplication - функция для создания нового экземпляра приложения
 func newApplication() (*application, error) {
 
 	cfg := config.LoadConfig()
@@ -40,7 +34,17 @@ func newApplication() (*application, error) {
 
 	myLogger.Info("Config loaded from env")
 
-	db2.InitDB(*cfg)
+	dbconn, err := db2.InitDB(*cfg)
+	if err != nil {
+		myLogger.Error("Error initializing DB")
+		return nil, err
+	}
+
+	if err := dbconn.AutoMigrate(&models.Computer{}, &models.Booking{}); err != nil {
+		return nil, fmt.Errorf("failed to migrate database: %w", err)
+	}
+
+	db2.SeedComputers(dbconn)
 
 	myLogger.Info("DB initialized")
 
@@ -49,10 +53,11 @@ func newApplication() (*application, error) {
 	router := gin.New()
 
 	app := &application{
-		logger: myLogger,
-		router: router,
-		db:     db2.DB,
-		config: cfg,
+		logger:  myLogger,
+		router:  router,
+		db:      dbconn,
+		jwtUtil: jwt.NewJWTUtil(cfg.Secret),
+		config:  cfg,
 	}
 
 	app.initializeRoutes()
@@ -62,7 +67,6 @@ func newApplication() (*application, error) {
 }
 
 func main() {
-	// Создание нового приложения
 	app, err := newApplication()
 	if err != nil {
 		log.Fatalf("Could not initialize application: %s", err)
@@ -70,7 +74,6 @@ func main() {
 
 	defer app.logger.Close()
 
-	// Запуск сервера
 	app.logger.Info("Starting booking service")
 	if err := app.router.Run(":8080"); err != nil {
 		app.logger.Error(fmt.Sprintf("Could not start server: %s", err))
