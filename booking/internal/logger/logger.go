@@ -6,13 +6,17 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type Logger struct {
-	infoLogger  *log.Logger
-	warnLogger  *log.Logger
-	errorLogger *log.Logger
-	file        *os.File
+	infoLoggerFile  *log.Logger
+	warnLoggerFile  *log.Logger
+	errorLoggerFile *log.Logger
+	infoLoggerTerm  *log.Logger
+	warnLoggerTerm  *log.Logger
+	errorLoggerTerm *log.Logger
+	file            *os.File
 }
 
 var (
@@ -34,10 +38,13 @@ func NewLogger(filePath string) *Logger {
 		}
 
 		instance = &Logger{
-			infoLogger:  log.New(file, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
-			warnLogger:  log.New(file, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
-			errorLogger: log.New(file, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
-			file:        file,
+			infoLoggerFile:  log.New(file, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
+			warnLoggerFile:  log.New(file, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
+			errorLoggerFile: log.New(file, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
+			infoLoggerTerm:  log.New(os.Stdout, "", 0),
+			warnLoggerTerm:  log.New(os.Stdout, "", 0),
+			errorLoggerTerm: log.New(os.Stdout, "", 0),
+			file:            file,
 		}
 	})
 	return instance
@@ -51,19 +58,33 @@ const (
 	colorBlue   = "\033[34m"
 )
 
+func formatLogMessage(level, msg string) string {
+	return fmt.Sprintf("[%s] [%s] %s", time.Now().Format("2006-01-02 15:04:05"), level, msg)
+}
+
+func formatLogMessageColor(level, color, msg string) string {
+	return fmt.Sprintf("%s[%s] [%s] %s%s", color, time.Now().Format("2006-01-02 15:04:05"), level, msg, colorReset)
+}
+
 func (l *Logger) Info(msg string) {
-	l.infoLogger.Println(msg)
-	fmt.Printf("%sINFO: %s%s\n", colorGreen, msg, colorReset)
+	formattedMsg := formatLogMessage("INFO", msg)
+	formattedMsgColor := formatLogMessageColor("INFO", colorGreen, msg)
+	l.infoLoggerFile.Println(formattedMsg)
+	l.infoLoggerTerm.Println(formattedMsgColor)
 }
 
 func (l *Logger) Warn(msg string) {
-	l.warnLogger.Println(msg)
-	fmt.Printf("%sWARN: %s%s\n", colorYellow, msg, colorReset)
+	formattedMsg := formatLogMessage("WARN", msg)
+	formattedMsgColor := formatLogMessageColor("WARN", colorYellow, msg)
+	l.warnLoggerFile.Println(formattedMsg)
+	l.warnLoggerTerm.Println(formattedMsgColor)
 }
 
 func (l *Logger) Error(msg string) {
-	l.errorLogger.Println(msg)
-	fmt.Printf("%sERROR: %s%s\n", colorRed, msg, colorReset)
+	formattedMsg := formatLogMessage("ERROR", msg)
+	formattedMsgColor := formatLogMessageColor("ERROR", colorRed, msg)
+	l.errorLoggerFile.Println(formattedMsg)
+	l.errorLoggerTerm.Println(formattedMsgColor)
 }
 
 func (l *Logger) Close() {
