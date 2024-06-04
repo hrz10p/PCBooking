@@ -8,7 +8,7 @@ import (
 type Computer struct {
 	gorm.Model
 	Number int    `gorm:"unique;not null"`
-	Status string `gorm:"type:varchar(20);default:'available'"` // available, booked
+	Status string `gorm:"type:varchar(20);default:'available'"`
 }
 type Booking struct {
 	gorm.Model

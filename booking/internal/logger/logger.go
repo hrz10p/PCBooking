@@ -26,7 +26,6 @@ var (
 
 func NewLogger(filePath string) *Logger {
 	once.Do(func() {
-		// Ensure the directory exists
 		logDir := filepath.Dir(filePath)
 		if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 			log.Fatalf("Failed to create log directory: %s", err)

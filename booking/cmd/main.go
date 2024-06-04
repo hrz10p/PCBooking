@@ -24,6 +24,22 @@ func (app *application) initializeRoutes() {
 	app.router.POST("/book", app.authMiddleware, app.bookComputer)
 	app.router.GET("/available", app.getAvailableComputers)
 	app.router.DELETE("/cancel/:id", app.authMiddleware, app.cancelBooking)
+
+	admin := app.router.Group("/admin")
+	admin.Use(app.authMiddleware, app.adminMiddleware)
+	{
+		admin.POST("/computers", app.createComputer)
+		admin.GET("/computers", app.getComputers)
+		admin.GET("/computers/:id", app.getComputerByID)
+		admin.PUT("/computers/:id", app.updateComputer)
+		admin.DELETE("/computers/:id", app.deleteComputer)
+
+		admin.POST("/bookings", app.createBooking)
+		admin.GET("/bookings", app.getBookings)
+		admin.GET("/bookings/:id", app.getBookingByID)
+		admin.PUT("/bookings/:id", app.updateBooking)
+		admin.DELETE("/bookings/:id", app.deleteBooking)
+	}
 }
 
 func newApplication() (*application, error) {

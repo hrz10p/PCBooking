@@ -21,7 +21,6 @@ func (app *application) bookComputer(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
-	// Check if computer is available
 	var computer models.Computer
 	if err := app.db.First(&computer, bookingRequest.ComputerID).Error; err != nil {
 		app.logger.Error("Computer not found: " + err.Error())
@@ -34,7 +33,6 @@ func (app *application) bookComputer(c *gin.Context) {
 		return
 	}
 
-	// Create booking
 	booking := models.Booking{
 		UserID:     userID,
 		ComputerID: bookingRequest.ComputerID,
@@ -48,7 +46,6 @@ func (app *application) bookComputer(c *gin.Context) {
 		return
 	}
 
-	// Update computer status
 	computer.Status = "booked"
 	if err := app.db.Save(&computer).Error; err != nil {
 		app.logger.Error("Failed to update computer status: " + err.Error())
@@ -86,7 +83,6 @@ func (app *application) cancelBooking(c *gin.Context) {
 		return
 	}
 
-	// Update computer status
 	var computer models.Computer
 	if err := app.db.First(&computer, booking.ComputerID).Error; err != nil {
 		app.logger.Error("Computer not found: " + err.Error())
@@ -101,7 +97,6 @@ func (app *application) cancelBooking(c *gin.Context) {
 		return
 	}
 
-	// Delete booking
 	if err := app.db.Delete(&booking).Error; err != nil {
 		app.logger.Error("Failed to delete booking: " + err.Error())
 		c.JSON(500, gin.H{"error": "Failed to delete booking"})
