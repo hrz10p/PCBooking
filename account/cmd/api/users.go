@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"html/template"
+	"log"
 	"net/http"
 	"pc_booking_account_system/internal/data"
+	"pc_booking_account_system/internal/data/mail_templates"
+	"pc_booking_account_system/internal/publisher"
 	"pc_booking_account_system/internal/validator"
 	"time"
 )
@@ -51,13 +56,12 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	//err = app.models.ActivationTokens.Insert(activationToken)
-	//if err != nil {
-	//	app.serverErrorResponse(w, r, err)
-	//	return
-	//}
 
 	/* SEND ACTIVATION TOKEN */
+	err = app.sendMail(input.Email, activationToken)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 
 	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user, "activation_token": activationToken}, nil)
 	if err != nil {
@@ -199,4 +203,34 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
+}
+
+type MailData struct {
+	RecipientEmail string
+	Token          data.Token
+}
+
+func (app *application) sendMail(email string, token *data.Token) error {
+	data := MailData{
+		RecipientEmail: email,
+		Token:          *token,
+	}
+	tmpl, err := template.New("email").Parse(mail_templates.EmailRegisterTemplate)
+	if err != nil {
+		log.Fatalf("Failed to parse template: %v", err)
+	}
+
+	var body bytes.Buffer
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		log.Fatalf("Failed to execute template: %v", err)
+	}
+
+	msg := publisher.Message{
+		Type:      "register",
+		Message:   body.String(),
+		Recipient: email,
+	}
+
+	return app.rabbit.PublishMessage(msg)
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"pc_booking_account_system/internal/data"
+	"pc_booking_account_system/internal/publisher"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -37,6 +38,7 @@ type application struct {
 	config config
 	logger *log.Logger
 	models data.Models
+	rabbit *publisher.RabbitPublisher
 }
 
 func main() {
