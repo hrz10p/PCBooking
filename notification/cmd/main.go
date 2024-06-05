@@ -5,7 +5,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"log"
-	"notification/internal/publisher"
 	"os"
 )
 
@@ -62,13 +61,6 @@ func main() {
 
 	go processMessages(msgs)
 
-	msg := publisher.Message{
-		Type:      "alert",
-		Message:   "Система вышла из строя",
-		Recipient: "sarzhan.yernur@gmail.com",
-	}
-
-	err = publisher.PublishMessage(msg)
 	if err != nil {
 		log.Printf("Failed to unmarshal message: %v", err)
 	}
