@@ -4,6 +4,7 @@ import (
 	"booking/internal/models"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 )
 
 func (app *application) createComputer(c *gin.Context) {
@@ -25,7 +26,29 @@ func (app *application) createComputer(c *gin.Context) {
 
 func (app *application) getComputers(c *gin.Context) {
 	var computers []models.Computer
-	if err := app.db.Find(&computers).Error; err != nil {
+	query := app.db
+
+	search := c.Query("search")
+	if search != "" {
+		query = query.Where("name LIKE ?", "%"+search+"%")
+	}
+
+	sort := c.Query("sort")
+	if sort != "" {
+		query = query.Order(sort)
+	}
+
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil {
+		offset = 0
+	}
+	query = query.Limit(limit).Offset(offset)
+
+	if err := query.Find(&computers).Error; err != nil {
 		app.logger.Error("Failed to retrieve computers: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve computers"})
 		return
@@ -100,7 +123,29 @@ func (app *application) createBooking(c *gin.Context) {
 
 func (app *application) getBookings(c *gin.Context) {
 	var bookings []models.Booking
-	if err := app.db.Find(&bookings).Error; err != nil {
+	query := app.db
+
+	search := c.Query("search")
+	if search != "" {
+		query = query.Where("description LIKE ?", "%"+search+"%")
+	}
+
+	sort := c.Query("sort")
+	if sort != "" {
+		query = query.Order(sort)
+	}
+
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil {
+		limit = 10
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil {
+		offset = 0
+	}
+	query = query.Limit(limit).Offset(offset)
+
+	if err := query.Find(&bookings).Error; err != nil {
 		app.logger.Error("Failed to retrieve bookings: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve bookings"})
 		return
