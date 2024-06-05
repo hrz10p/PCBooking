@@ -4,19 +4,24 @@ import (
 	"fmt"
 	"log"
 	"net/smtp"
+	"os"
 )
 
 func sendEmail(msg Message) {
-	smtpServer := "smtp-mail.outlook.com:587"
-	auth := smtp.PlainAuth("", "220392@astanait.edu.kz", "Sarzhan123", "smtp-mail.outlook.com")
+	smtpServer := os.Getenv("SMTP_SERVER")
+	smtpPort := os.Getenv("SMTP_PORT")
+	email := os.Getenv("EMAIL")
+	password := os.Getenv("EMAIL_PASSWORD")
+
+	auth := smtp.PlainAuth("", email, password, smtpServer)
 
 	subject := fmt.Sprintf("%s message", msg.Type)
-	body := fmt.Sprintf("Subject: %s\n\n%s", subject, msg.Message)
+	body := fmt.Sprintf("Subject: %s\nMIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n%s", subject, msg.Message)
 
-	hostname := "smtp-mail.outlook.com"
-	auth = LoginAuth(hostname, "220392@astanait.edu.kz", "Sarzhan123", "smtp-mail.outlook.com")
+	hostname := smtpServer
+	auth = LoginAuth(hostname, email, password, smtpServer)
 	// Send the email
-	err := smtp.SendMail(smtpServer, auth, "220392@astanait.edu.kz", []string{msg.Recipient}, []byte(body))
+	err := smtp.SendMail(smtpServer+":"+smtpPort, auth, email, []string{msg.Recipient}, []byte(body))
 	if err != nil {
 		log.Printf("Error sending email to %s: %v", msg.Recipient, err)
 	} else {

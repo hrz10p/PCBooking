@@ -2,7 +2,12 @@ package main
 
 import (
 	"booking/internal/models"
+	"booking/internal/publisher"
+	"bytes"
 	"github.com/gin-gonic/gin"
+	"html/template"
+	"log"
+	"strconv"
 	"time"
 )
 
@@ -53,7 +58,49 @@ func (app *application) bookComputer(c *gin.Context) {
 		return
 	}
 
+	email := c.GetString("email")
+
+	err := app.sendMail(email, bookingRequest.StartTime.String(), strconv.Itoa(int(bookingRequest.ComputerID)))
+
+	if err != nil {
+		app.logger.Error("Failed to send email: " + err.Error())
+	}
+
 	c.JSON(200, gin.H{"message": "Computer booked successfully"})
+}
+
+type EmailData struct {
+	RecipientEmail string
+	BookingDate    string
+	ComputerNumber string
+}
+
+func (app *application) sendMail(recipient string, date string, compnum string) error {
+
+	data := EmailData{
+		RecipientEmail: recipient,
+		BookingDate:    date,
+		ComputerNumber: compnum,
+	}
+
+	tmpl, err := template.New("email").Parse(models.EmailTemplate)
+	if err != nil {
+		log.Fatalf("Failed to parse template: %v", err)
+	}
+
+	var body bytes.Buffer
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		log.Fatalf("Failed to execute template: %v", err)
+	}
+
+	msg := publisher.Message{
+		Type:      "booking",
+		Message:   body.String(),
+		Recipient: recipient,
+	}
+
+	return app.rabbit.PublishMessage(msg)
 }
 
 func (app *application) getAvailableComputers(c *gin.Context) {

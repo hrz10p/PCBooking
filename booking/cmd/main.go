@@ -6,6 +6,7 @@ import (
 	"booking/internal/jwt"
 	"booking/internal/logger"
 	"booking/internal/models"
+	"booking/internal/publisher"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -18,6 +19,7 @@ type application struct {
 	db      *gorm.DB
 	config  *config.Config
 	jwtUtil *jwt.JWTUtil
+	rabbit  *publisher.RabbitPublisher
 }
 
 func (app *application) initializeRoutes() {
@@ -73,12 +75,15 @@ func newApplication() (*application, error) {
 
 	router.Use(gin.Recovery())
 
+	r := publisher.NewRabbitPublisher(cfg.RabbitUrl)
+
 	app := &application{
 		logger:  myLogger,
 		router:  router,
 		db:      dbconn,
 		jwtUtil: jwt.NewJWTUtil(cfg.Secret),
 		config:  cfg,
+		rabbit:  r,
 	}
 
 	app.initializeRoutes()
@@ -94,6 +99,11 @@ func main() {
 	}
 
 	defer app.logger.Close()
+
+	err = app.sendMail("yerlankuanysh@gmail.com", "2024.06.05 12:00", "Проверка проверка")
+	if err != nil {
+		app.logger.Error(err.Error())
+	}
 
 	app.logger.Info("Starting booking service")
 	if err := app.router.Run(":8080"); err != nil {

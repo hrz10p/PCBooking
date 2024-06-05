@@ -21,7 +21,7 @@ import (
 
 func setupTestApp() (*application, error) {
 	gin.SetMode(gin.TestMode)
-	logger := logger.NewLogger("../../logs/test.log")
+	logger := logger.NewLogger("../logs/test.log")
 
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		Logger: logger2.Default.LogMode(logger2.Silent),

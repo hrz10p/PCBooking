@@ -29,6 +29,7 @@ func (app *application) authMiddleware(c *gin.Context) {
 
 	c.Set("userID", claims.UserID)
 	c.Set("role", claims.Role)
+	c.Set("email", claims.Email)
 	c.Next()
 }
 

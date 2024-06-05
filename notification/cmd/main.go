@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	"log"
 	"notification/internal/publisher"
+	"os"
 )
 
 type Message struct {
@@ -14,7 +16,14 @@ type Message struct {
 }
 
 func main() {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	rabbitURL := os.Getenv("RABBITMQ_URL")
+
+	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}

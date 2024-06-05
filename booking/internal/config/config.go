@@ -7,15 +7,17 @@ import (
 )
 
 type Config struct {
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBHost     string
-	DBPort     string
-	LogPath    string
-	GinMode    string
-	Secret     string
-	Seeder     string
+	DBUser      string
+	DBPassword  string
+	DBName      string
+	DBHost      string
+	DBPort      string
+	LogPath     string
+	GinMode     string
+	Secret      string
+	Seeder      string
+	RabbitUrl   string
+	PostgresURL string
 }
 
 func LoadConfig() *Config {
@@ -25,14 +27,16 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
-		DBHost:     os.Getenv("DB_HOST"),
-		DBPort:     os.Getenv("DB_PORT"),
-		LogPath:    os.Getenv("LOG_PATH"),
-		GinMode:    os.Getenv("GIN_MODE"),
-		Secret:     os.Getenv("SECRET"),
-		Seeder:     os.Getenv("SEEDER"),
+		DBUser:      os.Getenv("DB_USER"),
+		DBPassword:  os.Getenv("DB_PASSWORD"),
+		DBName:      os.Getenv("DB_NAME"),
+		DBHost:      os.Getenv("DB_HOST"),
+		DBPort:      os.Getenv("DB_PORT"),
+		LogPath:     os.Getenv("LOG_PATH"),
+		GinMode:     os.Getenv("GIN_MODE"),
+		Secret:      os.Getenv("SECRET"),
+		Seeder:      os.Getenv("SEEDER"),
+		RabbitUrl:   os.Getenv("RABBIT_URL"),
+		PostgresURL: os.Getenv("POSTGRES_URL"),
 	}
 }
