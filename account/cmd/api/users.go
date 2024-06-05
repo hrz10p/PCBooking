@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"pc_booking_account_system/internal/data"
+	"pc_booking_account_system/internal/data/mail_templates"
+	"pc_booking_account_system/internal/publisher"
 	"pc_booking_account_system/internal/validator"
 	"time"
 )
@@ -47,16 +51,19 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	token, err := app.models.Tokens.New(user.ID, 10*time.Minute, data.ScopeActivation)
+	activationToken, err := app.models.ActivationTokens.New(user.ID, 10*time.Minute, data.ScopeActivation)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	fmt.Println(token.Plaintext)
 
-	/* SEND AUTHENTICATION TOKEN */
+	/* SEND ACTIVATION TOKEN */
+	err = app.sendMail(input.Email, activationToken)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 
-	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
+	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user, "activation_token": activationToken}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
@@ -82,15 +89,27 @@ func (app *application) loginUserHandler(w http.ResponseWriter, r *http.Request)
 		app.badRequestResponse(w, r, err)
 		return
 	}
-}
-
-func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.readIDParam(r)
+	jwtToken, err := app.models.JWTTokens.GenerateToken(user.ID, user.UserRole, user.Email)
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.serverErrorResponse(w, r, err)
 		return
 	}
-	user, err := app.models.Users.Get(id)
+	err = app.writeJSON(w, http.StatusOK, envelope{"autorization_token": jwtToken, "user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) getUserByEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	user, err := app.models.Users.GetByEmail(input.Email)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
@@ -114,13 +133,21 @@ func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := app.readIDParam(r)
+func (app *application) deleteByEmailUserHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+	err := app.readJSON(w, r, &input)
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.badRequestResponse(w, r, err)
 		return
 	}
-	err = app.models.Users.Delete(id)
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	err = app.models.Users.Delete(user.ID)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -167,7 +194,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	err = app.models.Tokens.DeleteAllForUser(data.ScopeActivation, user.ID)
+	err = app.models.ActivationTokens.DeleteAllForUser(data.ScopeActivation, user.ID)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -178,6 +205,32 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func (app *application) logoutUserHandler(w http.ResponseWriter, r *http.Request) {
+type MailData struct {
+	RecipientEmail string
+	Token          data.Token
+}
 
+func (app *application) sendMail(email string, token *data.Token) error {
+	data := MailData{
+		RecipientEmail: email,
+		Token:          *token,
+	}
+	tmpl, err := template.New("email").Parse(mail_templates.EmailRegisterTemplate)
+	if err != nil {
+		log.Fatalf("Failed to parse template: %v", err)
+	}
+
+	var body bytes.Buffer
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		log.Fatalf("Failed to execute template: %v", err)
+	}
+
+	msg := publisher.Message{
+		Type:      "register",
+		Message:   body.String(),
+		Recipient: email,
+	}
+
+	return app.rabbit.PublishMessage(msg)
 }
