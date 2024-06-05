@@ -32,6 +32,7 @@ type config struct {
 		burst   int
 		enabled bool
 	}
+	rabbitUrl string
 }
 
 type application struct {
@@ -50,6 +51,7 @@ func main() {
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+	flag.StringVar(&cfg.rabbitUrl, "rabbit-url", "amqp://guest:guest@localhost:5672/", "Provide rabbit url")
 
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
@@ -71,10 +73,13 @@ func main() {
 		logger.Fatal("database migration failed: ", err)
 	}
 
+	r := publisher.NewRabbitPublisher(cfg.rabbitUrl)
+
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		rabbit: r,
 	}
 
 	srv := &http.Server{

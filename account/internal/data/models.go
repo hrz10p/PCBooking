@@ -20,6 +20,6 @@ func NewModels(db *sql.DB) Models {
 	return Models{
 		Users:            UserModel{DB: db},
 		ActivationTokens: TokenModel{DB: db},
-		JWTTokens:        JWTUtil{secret: "secret"},
+		JWTTokens:        JWTUtil{secret: "micropencilguys"},
 	}
 }

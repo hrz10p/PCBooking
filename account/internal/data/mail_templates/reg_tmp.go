@@ -58,7 +58,7 @@ const EmailRegisterTemplate = `
         <div class="email-body">
             <h2>Hi, {{.RecipientEmail}}</h2>
             <p>Thank you for your registration!</p>
-            <p>Your activation code: {{.Token.Hash}}</p>
+            <p>Your activation code: {{.Token.Plaintext}}</p>
 			<p>Attention! Your activation code will expiry at: {{.Token.Expiry}}</p>
         </div>
         <div class="email-footer">
